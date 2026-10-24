@@ -9,9 +9,12 @@ def main():
  inventory=[];counts=collections.Counter();candidates=[];reviews=[];lines=['# OCR 结构索引','页号是裁切片段号；block 是识别结果 index。原图判断优先于类型标签。','']
  pages=json.loads(Path(a.pages).read_text(encoding='utf-8-sig')) if a.pages else None
  if pages:(out/'source_review').mkdir(exist_ok=True)
- previous=None
+ previous=None;empty_content_pages=[]
  for page in data['pages']:
   pn=page['page_idx']+1;lines.extend([f'## 片段 {pn}',''])
+  if not any(b.get('type') not in ('header','footer','page_number') for b in page.get('blocks',[])):
+   empty_content_pages.append(pn)
+   lines.append('警告：本片段未识别出正文；必须查看原图，不能据此认定原图为空。')
   for block in page.get('blocks',[]):
    typ=block['type'];idx=block['index'];counts[typ]+=1
    item={'page':pn,'block_index':idx,'type':typ,'bbox':block.get('bbox'),'continues_prev':block.get('continues_prev',False)}
@@ -39,7 +42,7 @@ def main():
    inventory.append(item);lines.append(f'- block {idx} / {typ}: {summary}')
    if typ not in ('header','footer','page_number'):previous={'page':pn,'block_index':idx,'type':typ}
   lines.append('')
- result={'page_count':len(data['pages']),'block_counts':dict(counts),'table_join_candidates':candidates,'blocks':inventory}
+ result={'page_count':len(data['pages']),'block_counts':dict(counts),'table_join_candidates':candidates,'empty_content_pages_require_source_check':empty_content_pages,'blocks':inventory}
  (out/'inventory.json').write_text(json.dumps(result,ensure_ascii=False,indent=2),encoding='utf-8')
  (out/'inventory.md').write_text('\n'.join(lines),encoding='utf-8')
  template=out/'content_review.template.json'

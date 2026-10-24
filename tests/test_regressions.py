@@ -23,8 +23,28 @@ class Regressions(unittest.TestCase):
   return Builder(self.data,self.pages,{'title':'Regression fixture','_reviews':{'table_reviews':[review]}})
  def test_pending_source_review_blocks_generation(self):
   with self.assertRaisesRegex(ValueError,'source review'):Builder(self.data,self.pages,{'title':'Fixture'}).run()
+ def test_code_preserves_whitespace_entities_and_literal_backslashes(self):
+  literal='    if (ready) {\n\tString label = "中 文 &lt;";\n        String pattern = "\\times";\n    }\n'
+  data={'pages':[{'page_idx':0,'blocks':[{'type':'code','index':0,'content':[{'type':'code_body','content':literal}]}]}]}
+  builder=Builder(data,self.pages,{'title':'Code fixture'});doc=builder.run()
+  self.assertEqual(doc.paragraphs[0].text,literal)
+  self.assertEqual(doc.paragraphs[0].paragraph_format.first_line_indent,0)
+  self.assertEqual(len(builder.report['code_blocks']),1)
  def test_mixed_table_cannot_become_empty_cells(self):
   with self.assertRaisesRegex(ValueError,'cell_images'):self.build(self.review(visual_content='present')).run()
+ def test_continuation_caption_does_not_break_table_join(self):
+  import copy
+  data=copy.deepcopy(self.data);pages=self.pages*3;reviews=[]
+  for n in range(3):
+   if n:data['pages'].append(copy.deepcopy(data['pages'][0]))
+   data['pages'][n]['page_idx']=n
+   reviews.append(self.review(page=n+1))
+  data['pages'][1]['blocks'][0]['content'].append({'type':'table_caption','index':1,'content':'Table caption'})
+  cfg={'title':'Fixture','_reviews':{'table_reviews':reviews},'table_joins':[{'page':2,'block_index':0,'reason':'Fixture continuation'},{'page':3,'block_index':0,'reason':'Fixture continuation'}]}
+  builder=Builder(data,pages,cfg);doc=builder.run()
+  self.assertEqual(len(doc.tables),1)
+  self.assertEqual(len(doc.tables[0].rows),6)
+  self.assertEqual(sum(p.text=='Table caption' for p in doc.paragraphs),1)
  def test_source_figure_does_not_become_invented_year_table(self):
   data=json.loads(json.dumps(self.data));data['pages'][0]['blocks'][0]['content'][0]['content']='<table><tr><td>Year</td><td>2017</td><td>Consensus</td></tr></table>'
   builder=Builder(data,self.pages,{'title':'Fixture','_reviews':{'table_reviews':[self.review(decision='figure',visual_content='present')]}})

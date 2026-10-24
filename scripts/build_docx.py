@@ -16,7 +16,7 @@ from content_guard import table_hazards,validate_review
 class Builder:
  def __init__(self,data,pages,cfg):
   self.data=data;self.pages=pages;self.cfg=cfg;self.doc=Document()
-  self.report={'schema_version':2,'status':'draft_requires_final_acceptance','headings':[],'tables':0,'images':0,'joined_tables':[],'skipped':[],'review_items':[],'source_blocks':0,'table_decisions':[],'cell_images':[]}
+  self.report={'schema_version':2,'status':'draft_requires_final_acceptance','headings':[],'tables':0,'images':0,'joined_tables':[],'skipped':[],'review_items':[],'source_blocks':0,'table_decisions':[],'cell_images':[],'code_blocks':[]}
   self.source_reviews={}
   for item in cfg.get('_reviews',{}).get('table_reviews',[]):
    key=(int(item['page']),int(item['block_index']))
@@ -104,6 +104,23 @@ class Builder:
    for run in p.runs:run.bold=True
   elif re.match(r'^[（(]?\d+[）).、]|^[◆◇✧\-•]',text):p.paragraph_format.first_line_indent=Pt(0)
   self.last_kind='text';self.last_table=None;self.last_location=(self.page,self.block)
+  return p
+
+ def code(self,block):
+  # Code is literal content: prose normalization would alter CJK strings,
+  # escape sequences, entities and the first line's indentation.
+  body=next((x for x in children(block) if x.get('type')=='code_body'),block)
+  text=textof(body).replace('\r\n','\n').replace('\r','\n')
+  for fix in self.cfg.get('text_replacements',[]):
+   if int(fix['page'])==self.page and fix['old'] in text:text=text.replace(fix['old'],fix['new'])
+  if not text:return
+  p=self.doc.add_paragraph();p.paragraph_format.first_line_indent=Pt(0)
+  p.paragraph_format.space_before=Pt(3);p.paragraph_format.space_after=Pt(5);p.paragraph_format.line_spacing=1.05
+  run=p.add_run(text);run.font.name='Consolas';run.font.size=Pt(9)
+  run._r.get_or_add_rPr().rFonts.set(qn('w:eastAsia'),self.cfg.get('east_asia_font','宋体'))
+  self.report['code_blocks'].append({'page':self.page,'block_index':self.block,'lines':text.count('\n')+1})
+  self.review('code_requires_source_check')
+  self.last_kind='code';self.last_table=None;self.last_location=(self.page,self.block)
   return p
 
  def table(self,markup,join=False,cell_images=None):
@@ -247,7 +264,7 @@ class Builder:
     p=self.doc.add_paragraph();p.paragraph_format.first_line_indent=Pt(0)
     levels=int(self.cfg.get('toc_levels',3))
     if not 1<=levels<=5:raise ValueError('toc_levels must be 1..5')
-    self.field(p,f'TOC \\o "1-{levels}" \\h \\z \\u');inserted=True;self.last_kind=None;self.last_table=None
+    self.field(p,f'TOC \\o "1-{levels}" \\h \\z \\u');self.doc.add_page_break();inserted=True;self.last_kind=None;self.last_table=None
    for block in page.get('blocks',[]):
     self.block=int(block['index']);key=(self.page,self.block);typ=block['type'];self.report['source_blocks']+=1
     if key in self.ignore:
@@ -264,12 +281,18 @@ class Builder:
       if key in self.joins:raise ValueError('Cannot join an omitted artifact')
       self.report['skipped'].append({'page':self.page,'block_index':self.block,'reason':'source_verified_artifact','evidence':review['evidence']});continue
      for sub in children(block):
-      if sub.get('type')=='table_caption':
+      if sub.get('type')=='table_caption' and key not in self.joins:
        old=self.block;self.block=int(sub.get('index',old));self.para(sub,bold=True);self.block=old
      if decision=='figure':
       if key in self.joins:raise ValueError('Cannot join a source figure as a native table')
       self.picture({'bbox':review.get('bbox') or bodies[0].get('bbox') or block.get('bbox')})
      else:self.table(bodies[0]['content'],join=key in self.joins,cell_images=review.get('cell_images',[]))
+     if key in self.joins:
+      table_state=(self.last_kind,self.last_table,self.last_cols,self.last_location)
+      for sub in children(block):
+       if sub.get('type')=='table_caption':
+        old=self.block;self.block=int(sub.get('index',old));self.para(sub,bold=True);self.block=old
+      self.last_kind,self.last_table,self.last_cols,self.last_location=table_state
      for sub in children(block):
       if sub.get('type')=='table_footnote':self.para(sub)
     elif typ in ('image','chart','figure'):
@@ -278,11 +301,9 @@ class Builder:
       if sub.get('type') in ('image_caption','figure_caption','chart_caption'):self.para(sub)
     elif typ in ('list','ordered_list','unordered_list'):
      for sub in children(block):self.para(sub)
+    elif typ=='code':self.code(block)
     elif typ in known_text:
      p=self.para(block,heading=typ=='paragraph_title',title=typ=='doc_title')
-     if typ=='code' and p is not None:
-      p.paragraph_format.first_line_indent=Pt(0);p.paragraph_format.line_spacing=1.05
-      for run in p.runs:run.font.name='Consolas';run.font.size=Pt(9)
     else:
      self.review('unsupported_block_type',type=typ,text=plain(block)[:180])
      if plain(block):self.para(block)
