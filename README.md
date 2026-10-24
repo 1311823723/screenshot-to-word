@@ -4,7 +4,7 @@
 
 An Agent Skill for reconstructing editable Word documents from ordered screenshots, with source review and final artifact verification.
 
-**状态：本地开发，尚未发布到 GitHub，尚未选定开放许可证。** 当前已实现 Windows x64 + Python 3.12 + MinerU 4.0.12 + Microsoft Word 桌面版流程。它不是免核对的一键转换器，不保证任意宿主、操作系统或硬件开箱即用。
+**状态：开发预览，尚未选定开放许可证。** 仓库：[1311823723/screenshot-to-word](https://github.com/1311823723/screenshot-to-word)。当前已实现 Windows x64 + Python 3.12 + MinerU 4.0.12 + Microsoft Word 桌面版流程。它不是免核对的一键转换器，不保证任意宿主、操作系统或硬件开箱即用。
 
 ## 使用
 
