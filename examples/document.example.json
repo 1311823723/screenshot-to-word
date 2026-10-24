@@ -1,0 +1,9 @@
+{
+  "title": "Synthetic monitoring example",
+  "exclude_pages": [],
+  "table_joins": [],
+  "heading_overrides": [],
+  "ignore_blocks": [],
+  "text_replacements": [],
+  "min_figure_area": 0.0
+}

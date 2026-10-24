@@ -1,0 +1,4 @@
+interface:
+  display_name: "截图还原 Word"
+  short_description: "从有序截图恢复可编辑文档，核对表内图片并检查自动目录和最终交付"
+  default_prompt: "请使用 $screenshot-to-word 将指定文件夹中的截图还原为可编辑 Word，并完成源图核对与最终验收。"
