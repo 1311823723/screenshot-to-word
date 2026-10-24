@@ -14,6 +14,8 @@ An Agent Skill for reconstructing editable Word documents from ordered screensho
 
 图片路径和技能路径直接写在消息里即可，配置由代理根据源图填写。支持技能导入的宿主可按自身规则导入该目录；本项目不承诺所有宿主都有同一安装命令。
 
+默认用简体中文沟通并编写交付说明、验收报告，无需另行指定；用户可明确要求其他语言。还原文档保持源图语言，英文、代码和标识符不自动翻译。
+
 首次运行依照 [环境与安装](references/environment.md) 部署免费依赖和本地模型。Word 须合法安装并允许本地自动化。默认不上传原始资料，也不把模型下载当作文档上传授权。
 
 详细可复制提示词见 [中文提示词](docs/prompts.zh-CN.md)。
