@@ -1,5 +1,6 @@
 ---
 name: screenshot-to-word
+license: MIT
 description: 将一组有序文档截图还原为可编辑 Word，保留真实标题、自动目录、原生表格及表内图片，并执行源图核对、实际 Office 渲染与绑定最终文件的验收。适用于 Word 长截图还原，不用于整页图片拼接或 Excel 工作簿还原。
 compatibility: Requires local file/command/image access, Python 3.12, MinerU 4.0.12 and an Office renderer. Automated setup and Word COM rendering target Windows x64.
 metadata:

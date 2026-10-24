@@ -4,7 +4,7 @@
 
 An Agent Skill for reconstructing editable Word documents from ordered screenshots, with source review and final artifact verification.
 
-**状态：开发预览，尚未选定开放许可证。** 仓库：[1311823723/screenshot-to-word](https://github.com/1311823723/screenshot-to-word)。当前已实现 Windows x64 + Python 3.12 + MinerU 4.0.12 + Microsoft Word 桌面版流程。它不是免核对的一键转换器，不保证任意宿主、操作系统或硬件开箱即用。
+**状态：开发预览，采用 [MIT 许可证](LICENSE)。** 仓库：[1311823723/screenshot-to-word](https://github.com/1311823723/screenshot-to-word)。当前已实现 Windows x64 + Python 3.12 + MinerU 4.0.12 + Microsoft Word 桌面版流程。它不是免核对的一键转换器，不保证任意宿主、操作系统或硬件开箱即用。
 
 ## 使用
 
@@ -71,10 +71,10 @@ python examples/make_demo.py --output work/demo
 python scripts/package_skill.py --output dist
 ```
 
-打包只收录技能入口、脚本、参考资料和必要元数据；会生成文件校验清单。发布前仍需选定许可证、完成新设备冷安装与完整文档验证，见 [发布清单](docs/releasing.md) 和 [路线图](docs/roadmap.md)。
+打包只收录技能入口、脚本、参考资料、MIT 许可证和必要元数据；会生成文件校验清单。正式版本发布前仍需完成新设备冷安装与完整文档验证，见 [发布清单](docs/releasing.md) 和 [路线图](docs/roadmap.md)。
 
 ## 限制与许可
 
 源图模糊、遮挡、缺页以及模型错误需要代理对照图片判断；程序无法证明代理真的看过图，也无法自动证明语义完全准确。`replacement_characters=0` 不等于没有缺字。报告只对实际核验的文件版本有效。
 
-本仓库暂未授予开放许可证；正式公开分享前由维护者选定。第三方工具、模型、字体和 Office 分别遵守其自身许可，打包本技能不包含这些第三方二进制。研究依据见 [结构设计](docs/design.md)。
+本仓库的 Skill 源码和配套文档采用 [MIT 许可证](LICENSE)，Copyright (c) 2026 1311823723。允许使用、修改、分发和商用，须保留版权及许可声明，具体以 LICENSE 为准。该许可不授予用户输入资料或生成文档的权利；第三方工具、模型、字体和 Office 分别遵守其自身许可，打包本技能不包含这些第三方二进制。研究依据见 [结构设计](docs/design.md)。

@@ -30,6 +30,6 @@ def main():
  digest=hashlib.sha256(target.read_bytes()).hexdigest()
  target.with_suffix('.zip.sha256').write_text(digest+'  '+target.name+'\n',encoding='utf-8')
  print(json.dumps({'archive':str(target),'source_files':len(files),'sha256':digest},ensure_ascii=True))
- print('Development archive; publication/license decisions and full runtime checks remain separate.')
+ print('Development archive; includes repository license when present. Full runtime checks and formal releases remain separate.')
 
 if __name__=='__main__':main()
