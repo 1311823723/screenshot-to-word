@@ -7,6 +7,7 @@ from lxml import etree as E
 from reportlab.pdfgen import canvas
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]/'scripts'))
 from build_docx import Builder
+from content_guard import table_hazards
 
 NS={'w':'http://schemas.openxmlformats.org/wordprocessingml/2006/main'}
 HTML='<table><tr><td>Mode</td><td>Monitoring</td></tr><tr><td>INFO</td><td></td></tr></table>'
@@ -23,6 +24,25 @@ class Regressions(unittest.TestCase):
   return Builder(self.data,self.pages,{'title':'Regression fixture','_reviews':{'table_reviews':[review]}})
  def test_pending_source_review_blocks_generation(self):
   with self.assertRaisesRegex(ValueError,'source review'):Builder(self.data,self.pages,{'title':'Fixture'}).run()
+ def test_long_merged_first_row_is_reviewed_not_deleted(self):
+  markup='<table><tr><td colspan="2">'+('Possible source prose. '*20)+'</td></tr><tr><td>Key</td><td>Value</td></tr></table>'
+  self.assertIn('long_merged_first_row_check_for_absorbed_body_prose',table_hazards(markup))
+  self.data['pages'][0]['blocks'][0]['content'][0]['content']=markup
+  doc=self.build(self.review()).run()
+  self.assertIn('Possible source prose.',doc.tables[0].cell(0,0).text)
+ def test_toc_break_belongs_to_first_body_paragraph(self):
+  data={'pages':[{'page_idx':0,'blocks':[{'type':'paragraph_title','index':0,'content':[{'type':'text','content':'1 Introduction'}]}]}]}
+  builder=Builder(data,self.pages,{'title':'TOC fixture','toc_before_page':1})
+  doc=builder.run();body=next(p for p in doc.paragraphs if p.text=='1 Introduction')
+  self.assertTrue(body.paragraph_format.page_break_before)
+  self.assertFalse(doc.element.xpath('.//w:br[@w:type="page"]'))
+ def test_toc_trailing_number_dot_is_not_part_of_title(self):
+  data={'pages':[{'page_idx':0,'blocks':[
+   {'type':'index','index':0,'content':[{'type':'text','content':'1. Introduction....3'}]},
+   {'type':'paragraph_title','index':1,'content':[{'type':'text','content':'1. Introduction'}]}]}]}
+  builder=Builder(data,self.pages,{'title':'TOC punctuation fixture'});builder.run()
+  self.assertEqual(builder.expected,{'1':'Introduction'})
+  self.assertEqual(builder.report['unmatched_source_toc'],[])
  def test_code_preserves_whitespace_entities_and_literal_backslashes(self):
   literal='    if (ready) {\n\tString label = "中 文 &lt;";\n        String pattern = "\\times";\n    }\n'
   data={'pages':[{'page_idx':0,'blocks':[{'type':'code','index':0,'content':[{'type':'code_body','content':literal}]}]}]}

@@ -36,7 +36,7 @@ class Builder:
     if block['type']=='index':
      for entry in children(block):
       m=re.match(r'^(\d+(?:[.．]\d+)*)\s*(.+?)(?:\.{2,}|…|·{2,})',plain(entry))
-      if m:self.expected[m[1].replace('．','.')]=m[2].strip()
+      if m:self.expected[m[1].replace('．','.')]=re.sub(r'^[.．]\s*','',m[2].strip())
   self.setup()
 
  def review(self,reason,**details):
@@ -98,6 +98,7 @@ class Builder:
    if level:text=number+' '+m[2].strip()
   if level and not 1<=level<=5:raise ValueError('Heading level must be 1..5')
   p=self.doc.add_paragraph(text,style='Title' if title else 'Heading '+str(level) if level else 'Normal')
+  self.body_start(p)
   if level:self.report['headings'].append({'page':self.page,'block_index':self.block,'level':level,'text':text})
   elif heading or bold:
    p.paragraph_format.first_line_indent=Pt(0);p.paragraph_format.keep_with_next=True
@@ -105,6 +106,11 @@ class Builder:
   elif re.match(r'^[（(]?\d+[）).、]|^[◆◇✧\-•]',text):p.paragraph_format.first_line_indent=Pt(0)
   self.last_kind='text';self.last_table=None;self.last_location=(self.page,self.block)
   return p
+
+ def body_start(self,p):
+  if getattr(self,'body_page_break_pending',False):
+   p.paragraph_format.page_break_before=True
+   self.body_page_break_pending=False
 
  def code(self,block):
   # Code is literal content: prose normalization would alter CJK strings,
@@ -115,6 +121,7 @@ class Builder:
    if int(fix['page'])==self.page and fix['old'] in text:text=text.replace(fix['old'],fix['new'])
   if not text:return
   p=self.doc.add_paragraph();p.paragraph_format.first_line_indent=Pt(0)
+  self.body_start(p)
   p.paragraph_format.space_before=Pt(3);p.paragraph_format.space_after=Pt(5);p.paragraph_format.line_spacing=1.05
   run=p.add_run(text);run.font.name='Consolas';run.font.size=Pt(9)
   run._r.get_or_add_rPr().rFonts.set(qn('w:eastAsia'),self.cfg.get('east_asia_font','宋体'))
@@ -124,6 +131,9 @@ class Builder:
   return p
 
  def table(self,markup,join=False,cell_images=None):
+  if getattr(self,'body_page_break_pending',False):
+   p=self.doc.add_paragraph();self.body_start(p)
+   p.paragraph_format.space_after=Pt(0);p.paragraph_format.line_spacing=Pt(1);p.add_run().font.size=Pt(1)
   tree=LH.fromstring(markup);rows=tree.xpath('.//tr') if tree.tag!='tr' else [tree]
   if not rows:raise ValueError(f'Empty table at {self.page}/{self.block}')
   cells=[];occupied=set();nc=0
@@ -201,6 +211,7 @@ class Builder:
   width=min(self.width,self.width*(x2-x1)/.8,float(self.cfg.get('figure_max_height_cm',20.5))*crop.width/crop.height)
   stream=io.BytesIO();crop.save(stream,format='PNG');stream.seek(0)
   p=self.doc.add_paragraph();p.paragraph_format.first_line_indent=Pt(0);p.paragraph_format.line_spacing=1
+  self.body_start(p)
   p.alignment=WD_ALIGN_PARAGRAPH.CENTER;p.add_run().add_picture(stream,width=Cm(width))
   self.report['images']+=1;self.last_kind='image';self.last_table=None
 
@@ -264,7 +275,7 @@ class Builder:
     p=self.doc.add_paragraph();p.paragraph_format.first_line_indent=Pt(0)
     levels=int(self.cfg.get('toc_levels',3))
     if not 1<=levels<=5:raise ValueError('toc_levels must be 1..5')
-    self.field(p,f'TOC \\o "1-{levels}" \\h \\z \\u');self.doc.add_page_break();inserted=True;self.last_kind=None;self.last_table=None
+    self.field(p,f'TOC \\o "1-{levels}" \\h \\z \\u');self.body_page_break_pending=True;inserted=True;self.last_kind=None;self.last_table=None
    for block in page.get('blocks',[]):
     self.block=int(block['index']);key=(self.page,self.block);typ=block['type'];self.report['source_blocks']+=1
     if key in self.ignore:
@@ -310,9 +321,11 @@ class Builder:
   if toc_page and not inserted:raise ValueError('toc_before_page was excluded or does not exist')
   if self.joins-self.used_joins:raise ValueError(f'Unused confirmed joins: {self.joins-self.used_joins}')
   self.normalize_tables()
-  found={re.sub(r'\s','',x['text']) for x in self.report['headings']}
+  # Source TOCs may use full-width punctuation while body OCR uses ASCII.
+  heading_key=lambda text:re.sub(r'\s','',text).replace('；',';').replace('：',':')
+  found={heading_key(x['text']) for x in self.report['headings']}
   self.report['source_toc_entries']=len(self.expected)
-  self.report['unmatched_source_toc']=[num+' '+title for num,title in self.expected.items() if re.sub(r'\s','',num+title) not in found]
+  self.report['unmatched_source_toc']=[num+' '+title for num,title in self.expected.items() if heading_key(num+title) not in found]
   return self.doc
 
 def main():

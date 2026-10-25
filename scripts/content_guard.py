@@ -4,6 +4,10 @@ from lxml import html as H
 def table_hazards(markup):
  tree=H.fromstring(markup);cells=tree.xpath('.//td|.//th');rows=tree.xpath('.//tr')
  flags=[]
+ if rows:
+  leading=rows[0].xpath('./td|./th')
+  if len(leading)==1 and int(leading[0].get('colspan','1'))>1 and len(leading[0].text_content().strip())>200:
+   flags.append('long_merged_first_row_check_for_absorbed_body_prose')
  if tree.xpath('.//img|.//svg|.//canvas|.//object'):flags.append('html_contains_visual_elements')
  if len(rows)>1:
   data=[c for row in rows[1:] for c in row.xpath('./td|./th')]

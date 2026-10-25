@@ -1,5 +1,5 @@
 from pathlib import Path
-import argparse,collections,json
+import argparse,collections,json,re
 from common import plain,children
 from content_guard import table_hazards
 
@@ -38,7 +38,14 @@ def main():
                         'action':'核对原图和列语义，再决定是否加入 table_joins'})
    elif typ in ('image','chart','figure'):
     item['children']=children(block);summary='(图像候选，需检查裁框与完整性)'
-   else:item['text']=plain(block);summary=item['text']
+   else:
+    item['text']=plain(block);summary=item['text']
+    if typ in ('header','footer','equation') and re.search(r'(?i)(\bSELECT\b|\bWHERE\b|\bORDER BY\b|\b(?:cd|jstack|jmap|find)\s|/home/|\b[A-Z_]+_DATE\s*=)',summary):
+     item.setdefault('hazards',[]).append('possible_body_code_misclassified_as_structure')
+     lines.append('警告：页眉、页脚或公式标签中可能混入正文命令/SQL，先看原图边缘和相邻片段再过滤。')
+    if re.search(r'(?i)(provided image.*(?:blank|no text)|no OCR result|无法识别.*(?:图片|图像)|图片.*完全空白)',summary):
+     item.setdefault('hazards',[]).append('possible_recognizer_commentary_check_original_image')
+     lines.append('警告：可能是识别器说明而非源文，必须对照原图，禁止按关键词直接删除。')
    inventory.append(item);lines.append(f'- block {idx} / {typ}: {summary}')
    if typ not in ('header','footer','page_number'):previous={'page':pn,'block_index':idx,'type':typ}
   lines.append('')
