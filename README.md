@@ -1,4 +1,4 @@
-# Screenshot to Word
+# 截图转Word / Screenshot to Word
 
 将一组有序文档截图还原成可编辑 Word 的 Agent Skill。正文、标题和普通表格保留原生编辑能力，目录使用真实 TOC 域，监控图和表内图片按来源恢复。
 
